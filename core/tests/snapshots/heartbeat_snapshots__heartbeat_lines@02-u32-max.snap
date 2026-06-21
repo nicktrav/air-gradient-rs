@@ -1,0 +1,6 @@
+---
+source: core/tests/heartbeat_snapshots.rs
+expression: "aq_core::heartbeat_line(count).as_str()"
+input_file: core/tests/fixtures/02-u32-max.txt
+---
+[aq] heartbeat #4294967295 up 1193046:28:15

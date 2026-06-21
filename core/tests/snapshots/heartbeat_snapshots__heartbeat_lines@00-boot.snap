@@ -1,0 +1,6 @@
+---
+source: core/tests/heartbeat_snapshots.rs
+expression: "aq_core::heartbeat_line(count).as_str()"
+input_file: core/tests/fixtures/00-boot.txt
+---
+[aq] heartbeat #0 up 0:00:00
