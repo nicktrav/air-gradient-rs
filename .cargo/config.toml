@@ -1,0 +1,20 @@
+# Repo-root cargo config.
+#
+# IMPORTANT: this file deliberately does NOT set `[build] target`. The workspace
+# default is the host so that `cargo test` builds and links aq-core natively.
+# Only target-*specific* flags live here, keyed by the MCU triple, so they apply
+# whenever that target is selected (from the root with `--target ...`, or from
+# `firmware/` where its own config supplies the default target) and never when
+# building for the host.
+[target.riscv32imc-unknown-none-elf]
+rustflags = [
+  # esp-hal ships its linker scripts in OUT_DIR and adds the search path, but the
+  # umbrella script must be selected explicitly. `linkall.x` pulls in memory.x,
+  # the chip fixups, hal-defaults.x, and the PAC's device.x (interrupt vectors).
+  "-C",
+  "link-arg=-Tlinkall.x",
+  # Frame pointers let esp-backtrace walk the stack on panic. Costs a little
+  # code size/speed; worth it while we are still bringing the board up.
+  "-C",
+  "force-frame-pointers",
+]

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["core"]
+members = ["core", "firmware"]
 
 # `cargo test` / `cargo build` at the repo root operate on the host and must
 # touch only the pure crate. `firmware` is built explicitly with its MCU target
