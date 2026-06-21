@@ -1,0 +1,10 @@
+# Wokwi simulation config. Points at the built ELF (workspace target dir lives at
+# the repo root, hence the `../`). Build the firmware first, then:
+#   wokwi-cli --timeout 10000 --expect-text "[aq] heartbeat #" firmware
+#
+# Wokwi models the C3's USB-Serial-JTAG console, so the heartbeat println shows up
+# in the serial monitor without any UART wiring.
+[wokwi]
+version = 1
+elf = "../target/riscv32imc-unknown-none-elf/release/aq-firmware"
+firmware = "../target/riscv32imc-unknown-none-elf/release/aq-firmware"
