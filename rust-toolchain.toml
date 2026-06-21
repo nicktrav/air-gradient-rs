@@ -1,0 +1,7 @@
+[toolchain]
+# Mainline stable Rust (no espup / Xtensa fork). The C3 is RISC-V, so plain
+# stable plus the bare-metal target is all we need.
+channel = "stable"
+targets = ["riscv32imc-unknown-none-elf"]
+components = ["rustfmt", "clippy"]
+profile = "minimal"

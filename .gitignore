@@ -1,0 +1,14 @@
+/target
+**/*.rs.bk
+*.pdb
+
+# Direnv / nix
+.direnv/
+result
+result-*
+
+# Flash backups are large and device-specific; keep them out of git.
+*.bin
+
+# insta leftovers
+*.snap.new
