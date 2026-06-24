@@ -8,11 +8,12 @@
       "id": "esp",
       "top": 0,
       "left": 0,
-      "attrs": {}
+      "attrs": { "flashSize": "4", "serialInterface": "USB_SERIAL_JTAG" }
     }
   ],
   "connections": [],
   "serialMonitor": {
-    "display": "always"
+    "display": "always",
+    "convertEol": true
   }
 }

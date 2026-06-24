@@ -21,6 +21,13 @@ use esp_println::println;
 // this single-core chip), so we do not wire portable-atomic ourselves.
 use esp_backtrace as _;
 
+// Embed the ESP-IDF application descriptor. The ESP32-C3 second-stage bootloader
+// (the one the mask-ROM loader hands off to, and the one Wokwi faithfully runs)
+// refuses to boot an app image that lacks this descriptor: without it control
+// never reaches `main`, so nothing ever prints. Required on real silicon and in
+// the emulator alike. See the esp-bootloader-esp-idf crate docs.
+esp_bootloader_esp_idf::esp_app_desc!();
+
 /// Heartbeat period. One second keeps the console lively without spamming it.
 const HEARTBEAT_PERIOD_MS: u32 = 1000;
 
