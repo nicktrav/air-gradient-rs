@@ -27,6 +27,35 @@
         # rust-toolchain.toml and read here, so `nix develop`, `rustup`, and CI
         # all agree on exactly one toolchain.
         rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+
+        # wokwi-cli isn't in nixpkgs, so we pull the upstream prebuilt binary.
+        # We only target this dev box (aarch64-darwin); the macOS asset just
+        # needs the exec bit. Bump `version` and `hash` together on update.
+        wokwiCli = pkgs.stdenvNoCC.mkDerivation {
+          pname = "wokwi-cli";
+          version = "0.26.1";
+
+          src = pkgs.fetchurl {
+            url = "https://github.com/wokwi/wokwi-cli/releases/download/v0.26.1/wokwi-cli-macos-arm64";
+            hash = "sha256-+WUSLcj7o9W/aLdu0BQ8e0zmCRAsLwgkPBEZibJAm8s=";
+          };
+
+          dontUnpack = true;
+          dontStrip = true;
+
+          installPhase = ''
+            runHook preInstall
+            install -Dm755 "$src" "$out/bin/wokwi-cli"
+            runHook postInstall
+          '';
+
+          meta = {
+            description = "Command-line interface for the Wokwi simulator";
+            homepage = "https://github.com/wokwi/wokwi-cli";
+            mainProgram = "wokwi-cli";
+            platforms = [ "aarch64-darwin" ];
+          };
+        };
       in
       {
         devShells.default = pkgs.mkShell {
@@ -40,7 +69,10 @@
 
             # Snapshot-test review (`cargo insta review`).
             pkgs.cargo-insta
-          ];
+          ]
+          # Emulator smoke test (`wokwi-cli`). Not in nixpkgs, so packaged from
+          # the upstream prebuilt binary; only built for this dev box.
+          ++ pkgs.lib.optional (system == "aarch64-darwin") wokwiCli;
 
           env = {
             # esp-println reads this for log filtering.
