@@ -1,0 +1,16 @@
+[package]
+name = "aq-outdoor"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "AirGradient Open Air O-1PST outdoor firmware binary for the ESP32-C3."
+
+# Stub board binary, kept building so the multi-board seam stays honest in CI.
+# Identical shape to aq-indoor; only the board profile differs. It grows its own
+# sensor path once that unit is in hand.
+[dependencies]
+aq-adapter = { workspace = true }
+esp-hal = { workspace = true }
+esp-backtrace = { workspace = true }
+esp-bootloader-esp-idf = { workspace = true }

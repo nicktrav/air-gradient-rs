@@ -35,14 +35,25 @@ pub fn format_uptime(seconds: u32) -> String<16> {
     out
 }
 
-/// Build the heartbeat console line for a given heartbeat count.
+/// Build the heartbeat console line for a given board and heartbeat count.
 ///
-/// The firmware emits one heartbeat per second, so `count` doubles as an uptime
-/// in seconds. Keeping that assumption here (rather than in the adapter) is what
-/// lets us snapshot-test the exact bytes that hit the wire.
-pub fn heartbeat_line(count: u32) -> String<48> {
+/// `board` is the per-board tag (e.g. `aq-indoor`, `aq-outdoor`) so the two
+/// firmware artifacts emit distinguishable lines from one shared formatter; the
+/// adapter passes its [`BoardProfile`] name straight through. The firmware emits
+/// one heartbeat per second, so `count` doubles as an uptime in seconds. Keeping
+/// both assumptions here (rather than in the adapter) is what lets us
+/// snapshot-test the exact bytes that hit the wire.
+///
+/// Capacity 64 holds the widest line: the longest board tag we use plus the
+/// widest `u32` count and uptime (`[aq-outdoor] heartbeat #4294967295 up
+/// 1193046:28:15`).
+pub fn heartbeat_line(board: &str, count: u32) -> String<64> {
     let mut out = String::new();
-    let _ = write!(out, "[aq] heartbeat #{count} up {}", format_uptime(count));
+    let _ = write!(
+        out,
+        "[{board}] heartbeat #{count} up {}",
+        format_uptime(count)
+    );
     out
 }
 
@@ -66,5 +77,15 @@ mod tests {
     #[test]
     fn uptime_hours_grow_past_two_digits() {
         expect!["100:00:00"].assert_eq(format_uptime(360_000).as_str());
+    }
+
+    // The board tag is what distinguishes the two firmware artifacts on the wire,
+    // so prove the same count renders a different line per board.
+    #[test]
+    fn heartbeat_tags_the_board() {
+        expect!["[aq-indoor] heartbeat #7 up 0:00:07"]
+            .assert_eq(heartbeat_line("aq-indoor", 7).as_str());
+        expect!["[aq-outdoor] heartbeat #7 up 0:00:07"]
+            .assert_eq(heartbeat_line("aq-outdoor", 7).as_str());
     }
 }

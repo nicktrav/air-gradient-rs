@@ -3,10 +3,15 @@
 # IMPORTANT: this file deliberately does NOT set `[build] target`. The workspace
 # default is the host so that `cargo test` builds and links aq-core natively.
 # Only target-*specific* flags live here, keyed by the MCU triple, so they apply
-# whenever that target is selected (from the root with `--target ...`, or from
-# `firmware/` where its own config supplies the default target) and never when
+# whenever that target is selected (from the root with `--target ...`, or from a
+# board crate where its own config supplies the default target) and never when
 # building for the host.
 [target.riscv32imc-unknown-none-elf]
+# espflash auto-detects the C3 over the native USB port, flashes, then drops into
+# the serial monitor so heartbeat lines appear immediately. Hoisted here (keyed by
+# the MCU triple, so it never affects host builds) and shared by every board crate
+# rather than copied into each one's .cargo/config.toml.
+runner = "espflash flash --monitor"
 rustflags = [
   # esp-hal ships its linker scripts in OUT_DIR and adds the search path, but the
   # umbrella script must be selected explicitly. `linkall.x` pulls in memory.x,

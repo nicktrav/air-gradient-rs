@@ -12,6 +12,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aq-adapter"
+version = "0.1.0"
+dependencies = [
+ "aq-core",
+ "esp-hal",
+ "esp-println",
+]
+
+[[package]]
 name = "aq-core"
 version = "0.1.0"
 dependencies = [
@@ -23,14 +32,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "aq-firmware"
+name = "aq-indoor"
 version = "0.1.0"
 dependencies = [
- "aq-core",
+ "aq-adapter",
  "esp-backtrace",
  "esp-bootloader-esp-idf",
  "esp-hal",
- "esp-println",
+]
+
+[[package]]
+name = "aq-outdoor"
+version = "0.1.0"
+dependencies = [
+ "aq-adapter",
+ "esp-backtrace",
+ "esp-bootloader-esp-idf",
+ "esp-hal",
 ]
 
 [[package]]

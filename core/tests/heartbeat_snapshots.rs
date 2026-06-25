@@ -17,8 +17,10 @@ fn heartbeat_lines() {
         // Name each snapshot after its fixture file so the .snap is easy to map
         // back to its input.
         let stem = path.file_stem().unwrap().to_string_lossy().into_owned();
+        // Snapshot against the primary board; per-board tagging is covered by the
+        // inline `heartbeat_tags_the_board` test in the crate.
         with_settings!({ snapshot_suffix => stem }, {
-            assert_snapshot!(aq_core::heartbeat_line(count).as_str());
+            assert_snapshot!(aq_core::heartbeat_line("aq-indoor", count).as_str());
         });
     });
 }

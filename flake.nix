@@ -85,8 +85,8 @@
             echo "  espflash: $(espflash --version 2>/dev/null || echo 'not found')"
             echo ""
             echo "  host tests:  cargo test"
-            echo "  firmware:    cargo build -p aq-firmware --target riscv32imc-unknown-none-elf --release"
-            echo "  flash:       (cd firmware && cargo run)"
+            echo "  firmware:    cargo build -p aq-indoor -p aq-outdoor --target riscv32imc-unknown-none-elf --release"
+            echo "  flash:       (cd firmware/indoor && cargo run)   # or firmware/outdoor"
           '';
         };
       }

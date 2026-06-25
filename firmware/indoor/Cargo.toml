@@ -1,0 +1,16 @@
+[package]
+name = "aq-indoor"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "AirGradient ONE (I-9PSL) indoor firmware binary for the ESP32-C3."
+
+# Thin board binary: the shared bring-up lives in aq-adapter. This crate only
+# supplies the binary-only pieces (panic handler via esp-backtrace, the ESP-IDF
+# app descriptor) and picks the indoor board profile.
+[dependencies]
+aq-adapter = { workspace = true }
+esp-hal = { workspace = true }
+esp-backtrace = { workspace = true }
+esp-bootloader-esp-idf = { workspace = true }

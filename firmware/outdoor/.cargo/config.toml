@@ -1,0 +1,10 @@
+# Board-scoped cargo config. Discovered only when cargo runs from within this
+# crate, so `cd firmware/outdoor && cargo run` builds for the MCU and flashes over
+# USB-Serial-JTAG, while the repo root stays on the host target.
+#
+# This file intentionally carries ONLY the default target. The target-specific
+# rustflags and the espflash runner live in the repo-root .cargo/config.toml
+# (keyed by the MCU triple) so they are shared with the indoor board and with
+# root-level `cargo build -p aq-outdoor --target ...`.
+[build]
+target = "riscv32imc-unknown-none-elf"

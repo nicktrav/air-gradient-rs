@@ -1,0 +1,25 @@
+//! `aq-indoor`: the AirGradient ONE (I-9PSL) firmware entry point.
+//!
+//! Deliberately tiny. Everything interesting lives in [`aq_adapter`]; this binary
+//! only supplies the pieces that must be linked into the final image (the panic
+//! handler and the ESP-IDF app descriptor) and selects the indoor board profile.
+//! The matching outdoor binary is `aq-outdoor`.
+
+#![no_std]
+#![no_main]
+
+use esp_hal::main;
+
+// Pulls in the panic handler, which prints a backtrace over the same jtag-serial
+// console. Must be linked by the binary, not the adapter library.
+use esp_backtrace as _;
+
+// Embed the ESP-IDF application descriptor. The ESP32-C3 second-stage bootloader
+// (and Wokwi) refuses to boot an app image that lacks it: without it control never
+// reaches `main`, so nothing ever prints. Must live in the binary crate.
+esp_bootloader_esp_idf::esp_app_desc!();
+
+#[main]
+fn main() -> ! {
+    aq_adapter::run(aq_adapter::profiles::INDOOR)
+}

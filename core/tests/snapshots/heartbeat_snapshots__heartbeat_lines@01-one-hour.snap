@@ -1,6 +1,6 @@
 ---
 source: core/tests/heartbeat_snapshots.rs
-expression: "aq_core::heartbeat_line(count).as_str()"
+expression: "aq_core::heartbeat_line(\"aq-indoor\", count).as_str()"
 input_file: core/tests/fixtures/01-one-hour.txt
 ---
-[aq] heartbeat #3600 up 1:00:00
+[aq-indoor] heartbeat #3600 up 1:00:00

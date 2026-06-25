@@ -49,17 +49,19 @@ jobs:
       - name: Clippy (firmware / MCU target)
         run: >-
           nix develop --command
-          cargo clippy -p aq-firmware
+          cargo clippy -p aq-adapter -p aq-indoor -p aq-outdoor
           --target riscv32imc-unknown-none-elf -- -D warnings
 
       # CI=true => insta CI mode: a stale snapshot fails instead of updating.
       - name: Host tests
         run: nix develop --command cargo test
 
+      # Build both board binaries. Outdoor is a stub today, but keeping it in the
+      # build is what stops the multi-board seam from rotting.
       - name: Build firmware (release)
         run: >-
           nix develop --command
-          cargo build -p aq-firmware
+          cargo build -p aq-indoor -p aq-outdoor
           --target riscv32imc-unknown-none-elf --release
 
   # Optional emulator smoke test. Runs only when a Wokwi token is configured, so
@@ -87,16 +89,25 @@ jobs:
         if: env.WOKWI_CLI_TOKEN != ''
         run: >-
           nix develop --command
-          cargo build -p aq-firmware
+          cargo build -p aq-indoor -p aq-outdoor
           --target riscv32imc-unknown-none-elf --release
 
-      # Asserts the device boots and prints the heartbeat banner. Wokwi cannot
+      # Asserts each board boots and prints its own heartbeat banner. Wokwi cannot
       # model the real sensors, so we only assert serial/boot behaviour.
-      - name: Wokwi heartbeat smoke test
+      - name: Wokwi heartbeat smoke test (indoor)
         if: env.WOKWI_CLI_TOKEN != ''
         uses: wokwi/wokwi-ci-action@v1
         with:
           token: ${{ secrets.WOKWI_CLI_TOKEN }}
-          path: firmware
+          path: firmware/indoor
           timeout: 15000
-          expect_text: "[aq] heartbeat #"
+          expect_text: "[aq-indoor] heartbeat #"
+
+      - name: Wokwi heartbeat smoke test (outdoor)
+        if: env.WOKWI_CLI_TOKEN != ''
+        uses: wokwi/wokwi-ci-action@v1
+        with:
+          token: ${{ secrets.WOKWI_CLI_TOKEN }}
+          path: firmware/outdoor
+          timeout: 15000
+          expect_text: "[aq-outdoor] heartbeat #"

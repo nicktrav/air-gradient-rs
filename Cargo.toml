@@ -1,17 +1,31 @@
 [workspace]
 resolver = "2"
-members = ["core", "firmware"]
+# One pure host crate plus the MCU crates: a shared esp-hal adapter library and
+# one thin binary per board. Both boards are the same ESP32-C3, so they share the
+# adapter and all deps; only the board profile and entry point differ.
+members = ["core", "firmware/adapter", "firmware/indoor", "firmware/outdoor"]
 
-# `cargo test` / `cargo build` at the repo root operate on the host and must
-# touch only the pure crate. `firmware` is built explicitly with its MCU target
-# (`cargo build -p aq-firmware --target riscv32imc-unknown-none-elf`); keeping it
-# out of the default set stops the host toolchain from trying to compile esp-hal.
+# `cargo test` / `cargo build` at the repo root operate on the host and must touch
+# only the pure crate. The MCU crates (`aq-adapter`, `aq-indoor`, `aq-outdoor`)
+# are built explicitly with their target (`cargo build -p aq-indoor --target
+# riscv32imc-unknown-none-elf`); keeping them out of the default set stops the
+# host toolchain from trying to compile esp-hal.
 default-members = ["core"]
 
 [workspace.package]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/nicktrav/air-gradient-rs"
+
+# Shared deps live here so the two board binaries and the adapter can't drift to
+# different esp-hal/esp-println versions. Members opt in with `{ workspace = true }`.
+[workspace.dependencies]
+aq-core = { path = "core" }
+aq-adapter = { path = "firmware/adapter" }
+esp-hal = { version = "1.1.1", features = ["esp32c3", "unstable"] }
+esp-backtrace = { version = "0.19.0", features = ["esp32c3", "panic-handler", "println"] }
+esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32c3"] }
+esp-println = { version = "0.17.0", default-features = false, features = ["esp32c3", "jtag-serial"] }
 
 # Small binary, predictable panics: optimise the firmware for size and keep
 # overflow checks on even in release so sensor-math bugs surface on-device.

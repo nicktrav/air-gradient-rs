@@ -1,0 +1,13 @@
+# Wokwi simulation config for the outdoor board. Points at the built ELF (the
+# workspace target dir lives at the repo root, hence the `../../`). Build first,
+# then:
+#   wokwi-cli --timeout 10000 --expect-text "[aq-outdoor] heartbeat #" firmware/outdoor
+#
+# The heartbeat is emitted over the C3's native USB-Serial-JTAG (esp-println's
+# `jtag-serial` backend), not a UART. Wokwi only routes that console to the serial
+# monitor when the chip part carries `"serialInterface": "USB_SERIAL_JTAG"` and has
+# no `$serialMonitor` UART connections - both set in diagram.json.
+[wokwi]
+version = 1
+elf = "../../target/riscv32imc-unknown-none-elf/release/aq-outdoor"
+firmware = "../../target/riscv32imc-unknown-none-elf/release/aq-outdoor"
