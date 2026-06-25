@@ -2,15 +2,25 @@
 
 ## Project
 
-Custom `no_std` Rust firmware for an **AirGradient Open Air O-1PST** outdoor air
-quality monitor (**ESP32-C3-MINI**, RISC-V). This is a **learning project for
-embedded systems** — the journey is a goal in itself, so we favour clarity,
-correctness, and understanding over shortcuts or magic.
+Custom `no_std` Rust firmware for **AirGradient** air quality monitors, both built
+on the **ESP32-C3-MINI** (RISC-V). The **AirGradient ONE (I-9PSL)** indoor unit is
+the **primary** target; the **Open Air O-1PST** outdoor unit is supported as a
+second board. This is a **learning project for embedded systems** — the journey is
+a goal in itself, so we favour clarity, correctness, and understanding over
+shortcuts or magic.
+
+Both boards share the same MCU, toolchain, console, and build wiring; they differ
+only in **sensor lineup**, the **corrections** that make readings trustworthy
+(indoor vs outdoor), and **peripherals** (the indoor ONE adds a 1.3" I²C OLED).
+We handle this with **compile-time board selection**: a shared `aq-adapter` glue
+library plus one thin binary per board (`aq-indoor`, `aq-outdoor`). See
+"Multi-board layout" below.
 
 The work is built in small **wedges**. The endgame is: read the on-board sensors
-(particulate matter, CO₂, temperature/humidity), apply the corrections that make
-outdoor readings trustworthy, and publish over Wi-Fi/MQTT to Home Assistant. We
-get there one reviewable, tested step at a time — not in one big firmware drop.
+(particulate matter, CO₂, temperature/humidity, and TVOC/NOx on the indoor unit),
+apply the per-board corrections that make readings trustworthy, and publish over
+Wi-Fi/MQTT to Home Assistant. We get there one reviewable, tested step at a time —
+not in one big firmware drop.
 
 ## Hardware facts that constrain the code
 
@@ -38,16 +48,18 @@ get there one reviewable, tested step at a time — not in one big firmware drop
 
 ## Hardware-ops safety rules (non-negotiable)
 
-- **Back up first.** Before flashing anything custom, dump the full flash:
-  `esptool read-flash 0 0x400000 stock-openair.bin` (esptool 5.x uses hyphens;
-  `read_flash` still works but warns). This is the only artifact that preserves the
-  NVS partition (Wi-Fi creds, device identity, factory calibration); the public
-  firmware can't restore those. **Verify the dump** by reading twice and diffing: a
+- **Back up first.** Before flashing anything custom, dump the full flash, naming
+  the file per board so the two units' dumps don't collide (e.g.
+  `stock-airgradient-one.bin` for the indoor unit, `stock-openair.bin` for the
+  outdoor one): `esptool read-flash 0 0x400000 stock-airgradient-one.bin`
+  (esptool 5.x uses hyphens; `read_flash` still works but warns). This is the only
+  artifact that preserves the NVS partition (Wi-Fi creds, device identity, factory
+  calibration); the public firmware can't restore those. **Verify the dump** by reading twice and diffing: a
   faithful read is byte-identical *outside* `nvs` — that partition legitimately
   churns on every boot (RF cal, Wi-Fi state), so whole-image hashes won't match
   across reads. Random differences in *static* regions mean a flaky read.
 - **Restore = full erase then full-image write**, never an app-only reflash:
-  `esptool erase-flash` then `esptool write-flash 0 stock-openair.bin` (esptool
+  `esptool erase-flash` then `esptool write-flash 0 stock-<board>.bin` (esptool
   verifies the written hash). An app dropped on top of mismatched NVS boots stale
   and looks like a code bug.
 - **Never burn eFuses.** They are one-time-programmable and the single irreversible
@@ -121,19 +133,44 @@ Hexagonal / ports-and-adapters. The workspace splits in two:
 │   │                     MQTT payload building, state machines
 │   └── tests/
 │       └── fixtures/     data-driven test cases
-├── firmware/             package: aq-firmware (#![no_std] bin, builds for MCU)
-│   ├── src/main.rs       thin adapter: esp-hal peripherals -> aq-core via traits
-│   ├── .cargo/config.toml  target + espflash runner (scoped to this crate)
-│   ├── wokwi.toml
-│   └── diagram.json
+├── firmware/             the MCU crates (built only for riscv32imc, never host)
+│   ├── adapter/          package: aq-adapter (#![no_std] lib): shared esp-hal
+│   │   └── src/lib.rs    glue — chip bring-up, run loop, BoardProfile, profiles
+│   ├── indoor/           package: aq-indoor  (#![no_std] bin): ONE / I-9PSL
+│   │   ├── src/main.rs   tiny entry: panic handler + app desc + run(INDOOR)
+│   │   ├── .cargo/config.toml  default target only (runner is at repo root)
+│   │   ├── wokwi.toml
+│   │   └── diagram.json
+│   └── outdoor/          package: aq-outdoor (#![no_std] bin): O-1PST (stub)
+│       └── …             same shape as indoor, board profile = OUTDOOR
 └── .github/workflows/ci.yml
 ```
 
 **Rule:** if logic *can* live in `aq-core`, it lives in `aq-core`. `aq-core`
 depends only on `embedded-hal` traits for any I/O it abstracts — **never `esp-hal`**.
-The `firmware` binary is boring glue. This is what makes nearly everything a plain
-host `cargo test`. (Package is named `aq-core`, not `core` — never shadow the std
-`core` crate name.)
+The board binaries are boring glue over the shared `aq-adapter`. This is what makes
+nearly everything a plain host `cargo test`. (Package is named `aq-core`, not
+`core` — never shadow the std `core` crate name.)
+
+### Multi-board layout
+
+- **One image per board, chosen at compile time** — never runtime auto-detect.
+  Each board is its own binary crate so only its code is compiled in.
+- **`aq-adapter`** holds everything board-agnostic at the esp-hal layer (bring-up,
+  the heartbeat/run loop) so "one crate per board" does **not** mean duplicated
+  glue. It is a library, so it must **not** define the panic handler or call
+  `esp_app_desc!()` — those are linked by the final binary, so each `aq-indoor` /
+  `aq-outdoor` bin supplies them and then calls `aq_adapter::run(profile)`.
+- **`BoardProfile`** (in `aq-adapter`) is the seam for per-board divergence. Today
+  it carries only the console tag and heartbeat period; the sensor lineup and the
+  indoor-vs-outdoor correction selector grow here. Keep board differences as plain
+  data/functions — **no `#[cfg]` board switches** in `aq-core`, which stays
+  board-agnostic and host-tests *both* boards' logic in one `cargo test`.
+- **Shared deps** live in root `[workspace.dependencies]` so the two boards can't
+  drift to different esp-hal/esp-println versions.
+- **Indoor is primary; outdoor is a CI-green stub.** Both binaries must build (and
+  Wokwi-smoke) at the heartbeat level — that is what keeps the seam from rotting —
+  but only flesh out outdoor once that unit is in hand.
 
 ## Testing idioms — test always
 
@@ -167,8 +204,9 @@ GitHub Actions. All gates required; any failure blocks merge:
 - `cargo fmt --check`
 - `cargo clippy --all-targets -- -D warnings`
 - `cargo test` (host: `aq-core` + `embedded-hal-mock` driver tests)
-- `cargo build -p aq-firmware --target riscv32imc-unknown-none-elf --release`
-- *(optional, once stable)* `wokwi-cli` smoke test on the built ELF
+- `cargo build -p aq-indoor -p aq-outdoor --target riscv32imc-unknown-none-elf --release`
+  (both boards must build; outdoor is a stub but stays green)
+- *(optional, once stable)* `wokwi-cli` smoke test per board on the built ELF
   (needs `WOKWI_CLI_TOKEN` in repo secrets)
 - Snapshots run in **CI mode** so stale ones **fail** — never auto-update in CI
   (don't pass `UPDATE_EXPECT`; `insta` respects the `CI` env var).
@@ -177,20 +215,25 @@ Toolchain pinned via `rust-toolchain.toml` for reproducible builds.
 
 ## Workspace gotcha: two targets, one repo
 
-Keep the embedded target **scoped to `firmware/`** via its own
-`firmware/.cargo/config.toml`:
+Keep the embedded target **scoped to each board crate** via its own
+`firmware/<board>/.cargo/config.toml`, which carries **only** the default target:
 
 ```toml
 [build]
 target = "riscv32imc-unknown-none-elf"
-
-[target.riscv32imc-unknown-none-elf]
-runner = "espflash flash --monitor"
 ```
 
-Run host tests from the **repo root** (default host target). Do **not** set a global
-default target, or `cargo test` will try to build `aq-core` for the MCU and the host
-test harness won't link.
+The **target-specific rustflags and the espflash runner** live once in the
+**repo-root** `.cargo/config.toml`, keyed by the MCU triple
+(`[target.riscv32imc-unknown-none-elf]`), so they are shared by both boards and by
+root-level `cargo build -p aq-indoor --target …` — without ever affecting host
+builds (which never select that triple).
+
+Run host tests from the **repo root** (default host target, `default-members =
+["core"]`). Do **not** set a global default target, or `cargo test` will try to
+build `aq-core` for the MCU and the host test harness won't link. Build the MCU
+crates explicitly, e.g.
+`cargo build -p aq-indoor -p aq-outdoor --target riscv32imc-unknown-none-elf`.
 
 ## Walkthrough logbook
 
