@@ -32,16 +32,24 @@ get there one reviewable, tested step at a time — not in one big firmware drop
 - **Sensors** hang off I²C/UART (particulate, CO₂ NDIR, temp/humidity). Do **not**
   hard-code a sensor lineup from memory — confirm part numbers against the actual
   unit, and treat **stock AirGradient firmware as the ground-truth reference** for
-  what a given sensor *should* read.
+  what a given sensor *should* read. On boot the stock firmware prints its live
+  config as `[Configure] Info: {...}` JSON over the USB-Serial-JTAG console (model,
+  units, per-measure correction algorithms) — a convenient ground-truth snapshot.
 
 ## Hardware-ops safety rules (non-negotiable)
 
 - **Back up first.** Before flashing anything custom, dump the full flash:
-  `esptool read_flash 0 0x400000 stock-openair.bin`. This is the only artifact that
-  preserves the NVS partition (Wi-Fi creds, device identity, factory calibration);
-  the public firmware can't restore those.
-- **Restore = full erase then full-image write**, never an app-only reflash. An app
-  dropped on top of mismatched NVS boots stale and looks like a code bug.
+  `esptool read-flash 0 0x400000 stock-openair.bin` (esptool 5.x uses hyphens;
+  `read_flash` still works but warns). This is the only artifact that preserves the
+  NVS partition (Wi-Fi creds, device identity, factory calibration); the public
+  firmware can't restore those. **Verify the dump** by reading twice and diffing: a
+  faithful read is byte-identical *outside* `nvs` — that partition legitimately
+  churns on every boot (RF cal, Wi-Fi state), so whole-image hashes won't match
+  across reads. Random differences in *static* regions mean a flaky read.
+- **Restore = full erase then full-image write**, never an app-only reflash:
+  `esptool erase-flash` then `esptool write-flash 0 stock-openair.bin` (esptool
+  verifies the written hash). An app dropped on top of mismatched NVS boots stale
+  and looks like a code bug.
 - **Never burn eFuses.** They are one-time-programmable and the single irreversible
   action on this chip. Nothing in this project requires them.
 - Otherwise the device is **effectively unbrickable** — the first-stage bootloader
