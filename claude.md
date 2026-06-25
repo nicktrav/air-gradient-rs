@@ -192,6 +192,28 @@ Run host tests from the **repo root** (default host target). Do **not** set a gl
 default target, or `cargo test` will try to build `aq-core` for the MCU and the host
 test harness won't link.
 
+## Walkthrough logbook
+
+`docs/walkthrough/` is a chaptered, learner-oriented tour of the firmware that doubles
+as a logbook of how the project evolved. It is **not** living documentation: each
+chapter is a snapshot of the repo at one commit, written for someone learning Rust and
+embedded systems, and left untouched afterwards. Old chapters are not retro-edited when
+later code changes — the next chapter narrates the change instead.
+
+- **Pinned to a SHA.** Every chapter (`NN-<slug>.md`) carries YAML frontmatter with a
+  `high_watermark` (the commit the prose describes up to), a `covers` range (previous
+  chapter's watermark to this one, `<root>` for the first), and an `encoded` date.
+  `git checkout <high_watermark>` reproduces the tree the chapter describes.
+- **When to cut a chapter.** After a meaningful batch of wedges lands and the narrative
+  has moved on, add the next-numbered chapter. Its `covers` starts at the prior
+  chapter's `high_watermark` and ends at the new HEAD; set `high_watermark` to that
+  HEAD. Chapters are normally encoded at a HEAD, so the commit that adds the chapter and
+  its watermark nearly coincide.
+- **Keep the index current.** Add a row to the table in
+  [`docs/walkthrough/README.md`](docs/walkthrough/README.md) for each new chapter.
+- Relative links in a chapter point at repo files via `../../` (chapters live two
+  directories below the root).
+
 ## Conventions
 
 - Small, reviewable commits; each one leaves CI green.
